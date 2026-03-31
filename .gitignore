@@ -1,3 +1,45 @@
-# Misc
+# Ambientes e Variáveis Secretas
+.env
+.env.*
+!.env.example
+
+# Go
+/app/bin/
+/app/build/
+/app/vendor/
+*.local
+*.exe
+*.test
+*.out
+cover.out
+coverage.txt
+
+# Editor / Sistema Operacional
+.agents/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
 .DS_Store
-tmp
+*.swp
+*.swo
+
+# Docker / Postgres
+/postgres_data/
+
+# Dados de Nós do Besu gerados localmente (mantemos a configuração base)
+/besu/nodes/*/data/database/
+/besu/nodes/*/data/caches/
+/besu/nodes/*/data/besu.*
+/besu/nodes/*/data/DATABASE_METADATA.json
+/besu/nodes/*/data/VERSION_METADATA.json
+/besu/nodes/*/logs/
+
+# Foundry / Solidy (dentro de SimpleStorage)
+/SimpleStorage/cache/
+/SimpleStorage/out/
+/SimpleStorage/broadcast/
+/SimpleStorage/.gas-snapshot
+/SimpleStorage/node_modules/
