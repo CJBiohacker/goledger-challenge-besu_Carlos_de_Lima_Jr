@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package api;
+
+option go_package = "goledger-challenge/pb";
+
+service OracleService {
+  // Escreve um valor no contrato inteligente (Besu)
+  rpc Set(SetRequest) returns (SetResponse);
+  
+  // Lê o valor atual do contrato inteligente (Besu)
+  rpc Get(GetRequest) returns (GetResponse);
+  
+  // Lê o valor da blockchain e salva (sincroniza) no banco de dados (PostgreSQL)
+  rpc Sync(SyncRequest) returns (SyncResponse);
+  
+  // Verifica se o valor no banco de dados local corresponde ao valor na blockchain
+  rpc Check(CheckRequest) returns (CheckResponse);
+}
+
+message SetRequest {
+  string value = 1;
+}
+
+message SetResponse {
+  bool success = 1;
+  string tx_hash = 2;
+}
+
+message GetRequest {}
+
+message GetResponse {
+  string value = 1;
+}
+
+message SyncRequest {}
+
+message SyncResponse {
+  bool success = 1;
+  string synced_value = 2;
+}
+
+message CheckRequest {}
+
+message CheckResponse {
+  bool in_sync = 1;
+  string db_value = 2;
+  string chain_value = 3;
+}
