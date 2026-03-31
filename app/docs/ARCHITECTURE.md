@@ -30,9 +30,18 @@ A interface de comunicação da nossa aplicação é desenhada sobre **gRPC** co
 ## Camada de Repositório e Conexão de Banco de Dados (Fase 3)
 
 Alinhados com a Arquitetura Hexagonal (Ports & Adapters) e o *Design By Contract*, blindamos as operações de persistência:
+
 1. **A Porta (Interface `OracleRepository`):** Define estritamente o que a aplicação pode pedir ao banco.
 2. **O Adaptador (Struct `postgresOracleRepo`):** É a única peça que de fato interage com o driver `pgx/v5` gerenciando queries de leitura e Escrita (UPSERT).
 
 O gerencialmento base do app é orquestrado através do `pgxpool`, oferecendo um pool eficiente de conexões ao em vez de criar novas reconexões do zero para cada hit do end-point gRPC, prevenindo gargalos assíncronos.  
 
 **Teorema CAP (`state_cache`):** Para lidar com a assimetria de tempo entre a Blockchain (foco em Consistência/Partição) e o App local (foco em Disponibilidade), o adaptador auto-executa a criação da tabela `state_cache` onde o "ID" é eternamente 1. Este registro único atua fundamentalmente como um *cache* espelho para mitigar os gargalos em operações de leitura, transferindo a carga do nó do Besu para a tabela rápida do Postgres.
+
+## Camada de Blockchain (Fase 3 - Parte 2)
+
+O adaptador para o a Rede Blockchain resolve três dos grandes problemas dos snippets padrão:
+
+1. **Gestão do ABI Dinâmica**: O cliente localiza e lê o arquivo `.json` estático gerado nativamente pelo Foundry através da técnica *Factory Pattern* em sua instanciação, evitando o *hardcode* da assinatura de blocos `abi`.
+2. **Serialização e Casting Seguro:** Todos os retornos string passam por verificação de conversão para `math/big.Int` do driver de linguagem, mantendo alinhamento com a EVM (`uint256`) garantindo não haver panic.
+3. **Receipt Validation**: A lógica de `SetValue` da API de `set()` não emite sucessos falsos — ela aguarda o evento `bind.WaitMined()` e também verifica ativamente se o status de retorno da Hash é `1` (Sucesso na camada de base).
