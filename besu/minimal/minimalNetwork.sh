@@ -60,8 +60,25 @@ until curl -s -X POST --data '{"jsonrpc":"2.0","method":"web3_clientVersion","pa
 done
 echo -e "\n${GREEN}besu.node-1 is responsive!${NC}\n"
 
-ENODE_RESPONSE=$(curl -s -X POST --data '{"jsonrpc":"2.0","method":"net_enode","params":[],"id":1}' -H "Content-Type: application/json" http://localhost:8545/)
-ENODE_URL=$(echo $ENODE_RESPONSE | jq -r '.result')
+# ENODE_RESPONSE=$(curl -s -X POST --data '{"jsonrpc":"2.0","method":"net_enode","params":[],"id":1}' -H "Content-Type: application/json" http://localhost:8545/)
+# ENODE_URL=$(echo $ENODE_RESPONSE | jq -r '.result')
+# echo $ENODE_URL > minimal/bootnodes.txt
+
+echo -e "${BLUE}Waiting for P2P subsystem to generate Enode...${NC}"
+ENODE_URL="null"
+
+# Fica em loop até o Besu parar de dar erro e retornar o URL real
+until [ "$ENODE_URL" != "null" ] && [ -n "$ENODE_URL" ]; do
+    ENODE_RESPONSE=$(curl -s -X POST --data '{"jsonrpc":"2.0","method":"net_enode","params":[],"id":1}' -H "Content-Type: application/json" http://localhost:8545/ 2>/dev/null)
+    ENODE_URL=$(echo $ENODE_RESPONSE | jq -r '.result')
+    
+    if [ "$ENODE_URL" == "null" ]; then
+        printf '*'
+        sleep 2
+    fi
+done
+
+echo -e "\n${GREEN}Enode captured successfully!${NC}"
 echo $ENODE_URL > minimal/bootnodes.txt
 
 HOST_IP=$(docker container inspect besu.node-1 | jq -r '.[0].NetworkSettings.Networks.besu_test_network.IPAddress')
