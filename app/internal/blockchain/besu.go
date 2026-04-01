@@ -16,13 +16,13 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-// ChainClient é a "Porta" da Arquitetura Hexagonal para a Blockchain.
+// ChainClient is the Hexagonal Architecture "Port" to the Blockchain.
 type ChainClient interface {
 	SetValue(ctx context.Context, value string) (string, error)
 	GetValue(ctx context.Context) (string, error)
 }
 
-// besuClient é o "Adaptador" de fato usando go-ethereum
+// besuClient is the actual "Adapter" using go-ethereum
 type besuClient struct {
 	client          *ethclient.Client
 	contractAddress common.Address
@@ -31,50 +31,50 @@ type besuClient struct {
 	chainID         *big.Int
 }
 
-// Config centraliza dependências do construtor
+// Config centralizes constructor dependencies
 type Config struct {
 	RPCUrl          string
 	ContractAddress string
 	PrivateKey      string
-	ABIPath         string // Caminho para SimpleStorage.json
+	ABIPath         string // Path to SimpleStorage.json
 }
 
-// foundryOutput auxilia a destrinchar o JSON massivo num unmarshal
+// foundryOutput helps unpack massive JSON in an unmarshal operation
 type foundryOutput struct {
 	ABI json.RawMessage `json:"abi"`
 }
 
-// NewBesuClient é a factory pattern
+// NewBesuClient is the factory pattern
 func NewBesuClient(ctx context.Context, cfg Config) (ChainClient, error) {
-	// 1. Conecta ao RPC do Besu
+	// 1. Connect to Besu RPC
 	client, err := ethclient.DialContext(ctx, cfg.RPCUrl)
 	if err != nil {
-		return nil, fmt.Errorf("erro conectando no Besu RPC: %w", err)
+		return nil, fmt.Errorf("error connecting to Besu RPC: %w", err)
 	}
 
-	// 2. Coleta ChainID da rede na qual conectamos (geralmente local=1337)
+	// 2. Fetch ChainID of the connected network (usually local=1337)
 	chainID, err := client.ChainID(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("erro lendo chain id: %w", err)
+		return nil, fmt.Errorf("error reading chain id: %w", err)
 	}
 
-	// 3. Lê e faz o Parse do ABI da compilação do Foundry em disco
+	// 3. Read and Parse the compiled Foundry ABI from disk
 	rawFile, err := os.ReadFile(cfg.ABIPath)
 	if err != nil {
-		return nil, fmt.Errorf("erro lendo arquivo json da ABI no path %s: %w", cfg.ABIPath, err)
+		return nil, fmt.Errorf("error reading json ABI file at path %s: %w", cfg.ABIPath, err)
 	}
 
 	var output foundryOutput
 	if err := json.Unmarshal(rawFile, &output); err != nil {
-		return nil, fmt.Errorf("falha extraindo 'abi' do json: %w", err)
+		return nil, fmt.Errorf("failed extracting 'abi' from json: %w", err)
 	}
 
 	parsedABI, err := abi.JSON(strings.NewReader(string(output.ABI)))
 	if err != nil {
-		return nil, fmt.Errorf("erro transformando interface ABI para pacote eth: %w", err)
+		return nil, fmt.Errorf("error transforming ABI interface to eth package: %w", err)
 	}
 
-	slog.Info("Besu Blockchain Client adaptado em memória", slog.String("chain_id", chainID.String()))
+	slog.Info("Besu Blockchain Client adapted in memory", slog.String("chain_id", chainID.String()))
 
 	return &besuClient{
 		client:          client,
@@ -85,23 +85,23 @@ func NewBesuClient(ctx context.Context, cfg Config) (ChainClient, error) {
 	}, nil
 }
 
-// SetValue escreve "set(uint256)" e aguarda mineração, retornando a hash.
+// SetValue writes "set(uint256)" and awaits mining, returning the hash.
 func (b *besuClient) SetValue(ctx context.Context, value string) (string, error) {
-	// A função na chain espera um número grande (uint256)
+	// The function on-chain expects a large number (uint256)
 	valInt, ok := new(big.Int).SetString(value, 10)
 	if !ok {
-		return "", fmt.Errorf("valor de input nao e um numero inteiro valido string=%s", value)
+		return "", fmt.Errorf("input value is not a valid integer string=%s", value)
 	}
 
-	// Assinatura usando chave privada
+	// Signature using private key
 	priv, err := crypto.HexToECDSA(b.privateKey)
 	if err != nil {
-		return "", fmt.Errorf("erro lendo chave privada ECSDA: %w", err)
+		return "", fmt.Errorf("error reading ECDSA private key: %w", err)
 	}
 
 	auth, err := bind.NewKeyedTransactorWithChainID(priv, b.chainID)
 	if err != nil {
-		return "", fmt.Errorf("erro criando transactor para o context: %w", err)
+		return "", fmt.Errorf("error creating transactor for the context: %w", err)
 	}
 
 	boundContract := bind.NewBoundContract(
@@ -112,28 +112,28 @@ func (b *besuClient) SetValue(ctx context.Context, value string) (string, error)
 		b.client,
 	)
 
-	// O nome da função real na string do contrato
+	// The actual function name in the contract string
 	tx, err := boundContract.Transact(auth, "set", valInt)
 	if err != nil {
-		return "", fmt.Errorf("erro disparando metodo 'set': %w", err)
+		return "", fmt.Errorf("error triggering 'set' method: %w", err)
 	}
 
-	slog.Info("Transação Besu submetida. Aguardando mineiro...", slog.String("tx", tx.Hash().Hex()))
+	slog.Info("Besu transaction submitted. Awaiting miner...", slog.String("tx", tx.Hash().Hex()))
 
-	// Aguardando ser escrito num bloco oficialmente
+	// Awaiting to be officially written into a block
 	receipt, err := bind.WaitMined(ctx, b.client, tx)
 	if err != nil {
-		return "", fmt.Errorf("falha aguardando confirmacao na fila: %w", err)
+		return "", fmt.Errorf("failed waiting for confirmation in queue: %w", err)
 	}
 	
 	if receipt.Status != 1 {
-		return tx.Hash().Hex(), fmt.Errorf("transacao minerada porem revertida. status=%v", receipt.Status)
+		return tx.Hash().Hex(), fmt.Errorf("transaction mined but reverted. status=%v", receipt.Status)
 	}
 
 	return tx.Hash().Hex(), nil
 }
 
-// GetValue faz a Call seca (read-only view) na função "get()"
+// GetValue executes a dry Call (read-only view) on the "get()" function
 func (b *besuClient) GetValue(ctx context.Context) (string, error) {
 	caller := &bind.CallOpts{
 		Pending: false,
@@ -151,17 +151,17 @@ func (b *besuClient) GetValue(ctx context.Context) (string, error) {
 	var output []interface{}
 	err := boundContract.Call(caller, &output, "get")
 	if err != nil {
-		return "", fmt.Errorf("falha chamando metodo view 'get()': %w", err)
+		return "", fmt.Errorf("failed calling view method 'get()': %w", err)
 	}
 
 	if len(output) == 0 {
-		return "", fmt.Errorf("o contrato respondeu vazio")
+		return "", fmt.Errorf("contract responded empty")
 	}
 
-	// Em Solidity o output é um uint256 apontado pro ponteiro de interface *big.Int
+	// In Solidity the output is a uint256 pointed to the interface pointer *big.Int
 	bigVal, ok := output[0].(*big.Int)
 	if !ok {
-		return "", fmt.Errorf("contrato respondeu, mas casting para array int falhou incrivelmente")
+		return "", fmt.Errorf("contract responded, but casting to int array failed incredibly")
 	}
 
 	return bigVal.String(), nil

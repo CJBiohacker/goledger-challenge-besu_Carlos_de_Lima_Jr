@@ -5,16 +5,16 @@ package api;
 option go_package = "goledger-challenge/pb";
 
 service OracleService {
-  // Escreve um valor no contrato inteligente (Besu)
+  // Writes a value to the smart contract (Besu)
   rpc Set(SetRequest) returns (SetResponse);
   
-  // Lê o valor atual do contrato inteligente (Besu)
+  // Reads the current value from the smart contract (Besu)
   rpc Get(GetRequest) returns (GetResponse);
   
-  // Lê o valor da blockchain e salva (sincroniza) no banco de dados (PostgreSQL)
+  // Reads the value from the blockchain and saves (synchronizes) it to the database (PostgreSQL)
   rpc Sync(SyncRequest) returns (SyncResponse);
   
-  // Verifica se o valor no banco de dados local corresponde ao valor na blockchain
+  // Checks if the value in the local database matches the value on the blockchain
   rpc Check(CheckRequest) returns (CheckResponse);
 }
 

@@ -1,5 +1,7 @@
 # GoLedger Challenge - Besu Edition
 
+**🚀 View the final Oracle Application Documentation and Quick Start Guide in [app/README.md](app/README.md) 🚀**
+
 In this challenge you will interact with a Hyperledger Besu node. The goal is to create a simple application that interacts with a Besu node to transact on a smart contract, read the value of a contract variable, and sync that value to an external database.
 
 We recommend a UNIX-like machine (Linux/macOS).
@@ -14,7 +16,7 @@ We recommend a UNIX-like machine (Linux/macOS).
   - Linux/Unix: Java 17+
 - [jq](https://jqlang.org/download/)
 - [wget](https://www.gnu.org/software/wget/) (macOS fallback: `curl`)
-- Fork the repository: https://github.com/goledgerdev/goledger-challenge-besu
+- Fork the repository: <https://github.com/goledgerdev/goledger-challenge-besu>
   - Fork it, do **NOT** clone it, since you will need to send us your forked repository
   - If you cannot fork it, create a private repository and give access to `samuelvenzi`
 
@@ -118,81 +120,81 @@ The contract ABI can be found at `SimpleStorage/out/SimpleStorage.sol/SimpleStor
 package main
 
 import (
-	"context"
-	"fmt"
-	"log"
-	"log/slog"
-	"strings"
-	"time"
+ "context"
+ "fmt"
+ "log"
+ "log/slog"
+ "strings"
+ "time"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
+ "github.com/ethereum/go-ethereum/accounts/abi"
+ "github.com/ethereum/go-ethereum/accounts/abi/bind"
+ "github.com/ethereum/go-ethereum/common"
+ "github.com/ethereum/go-ethereum/crypto"
+ "github.com/ethereum/go-ethereum/ethclient"
 )
 
 func ExecContract() {
-	abi, err := abi.JSON(strings.NewReader("REPLACE: abi JSON as string goes here")) // found under SimpleStorage/out/SimpleStorage.sol/SimpleStorage.json
-	if err != nil {
-		log.Fatal(err)
-	}
+ abi, err := abi.JSON(strings.NewReader("REPLACE: abi JSON as string goes here")) // found under SimpleStorage/out/SimpleStorage.sol/SimpleStorage.json
+ if err != nil {
+  log.Fatal(err)
+ }
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+ ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+ defer cancel()
 
-	client, err := ethclient.DialContext(ctx, "REPLACE: network URL") // e.g., http://localhost:8545
-	if err != nil {
-		log.Fatalf("error dialing node: %v", err)
-	}
+ client, err := ethclient.DialContext(ctx, "REPLACE: network URL") // e.g., http://localhost:8545
+ if err != nil {
+  log.Fatalf("error dialing node: %v", err)
+ }
 
-	slog.Info("querying chain id")
+ slog.Info("querying chain id")
 
-	chainId, err := client.ChainID(ctx)
-	if err != nil {
-		log.Fatalf("error querying chain id: %v", err)
-	}
-	defer client.Close()
+ chainId, err := client.ChainID(ctx)
+ if err != nil {
+  log.Fatalf("error querying chain id: %v", err)
+ }
+ defer client.Close()
 
-	contractAddress := common.HexToAddress("REPLACE: contract address") // printed by make devnet-deploy
+ contractAddress := common.HexToAddress("REPLACE: contract address") // printed by make devnet-deploy
 
-	boundContract := bind.NewBoundContract(
-		contractAddress,
-		abi,
-		client,
-		client,
-		client,
-	)
+ boundContract := bind.NewBoundContract(
+  contractAddress,
+  abi,
+  client,
+  client,
+  client,
+ )
 
-	priv, err := crypto.HexToECDSA("REPLACE: private key") // pre-funded key in SimpleStorage/.env.example
-	if err != nil {
-		log.Fatalf("error loading private key: %v", err)
-	}
+ priv, err := crypto.HexToECDSA("REPLACE: private key") // pre-funded key in SimpleStorage/.env.example
+ if err != nil {
+  log.Fatalf("error loading private key: %v", err)
+ }
 
-	auth, err := bind.NewKeyedTransactorWithChainID(priv, chainId)
-	if err != nil {
-		log.Fatalf("error creating transactor: %v", err)
-	}
+ auth, err := bind.NewKeyedTransactorWithChainID(priv, chainId)
+ if err != nil {
+  log.Fatalf("error creating transactor: %v", err)
+ }
 
-	tx, err := boundContract.Transact(auth, "REPLACE: method name")
-	if err != nil {
-		log.Fatalf("error transacting: %v", err)
-	}
+ tx, err := boundContract.Transact(auth, "REPLACE: method name")
+ if err != nil {
+  log.Fatalf("error transacting: %v", err)
+ }
 
-	fmt.Println("waiting until transaction is mined",
-		"tx", tx.Hash().Hex(),
-	)
+ fmt.Println("waiting until transaction is mined",
+  "tx", tx.Hash().Hex(),
+ )
 
-	receipt, err := bind.WaitMined(
-		context.Background(),
-		client,
-		tx,
-	)
-	if err != nil {
-		log.Fatalf("error waiting for transaction to be mined: %v", err)
-	}
+ receipt, err := bind.WaitMined(
+  context.Background(),
+  client,
+  tx,
+ )
+ if err != nil {
+  log.Fatalf("error waiting for transaction to be mined: %v", err)
+ }
 
-	fmt.Printf("transaction mined: %v\n", receipt)
+ fmt.Printf("transaction mined: %v\n", receipt)
 }
 ```
 
@@ -202,58 +204,57 @@ You can also use the following code to call `view` functions on the contract:
 package main
 
 import (
-	"context"
-	"fmt"
-	"strings"
-	"time"
+ "context"
+ "fmt"
+ "strings"
+ "time"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
+ "github.com/ethereum/go-ethereum/accounts/abi"
+ "github.com/ethereum/go-ethereum/accounts/abi/bind"
+ "github.com/ethereum/go-ethereum/common"
+ "github.com/ethereum/go-ethereum/ethclient"
 )
 
 func CallContract() {
-	var result interface{}
+ var result interface{}
 
-	abi, err := abi.JSON(strings.NewReader("REPLACE: abi JSON as string goes here")) // found under SimpleStorage/out/SimpleStorage.sol/SimpleStorage.json
-	if err != nil {
-		log.Fatalf("error parsing abi: %v", err)
-	}
+ abi, err := abi.JSON(strings.NewReader("REPLACE: abi JSON as string goes here")) // found under SimpleStorage/out/SimpleStorage.sol/SimpleStorage.json
+ if err != nil {
+  log.Fatalf("error parsing abi: %v", err)
+ }
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+ ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+ defer cancel()
 
-	client, err := ethclient.DialContext(ctx, "REPLACE: network URL") // e.g., http://localhost:8545
-	if err != nil {
-		log.Fatalf("error connecting to eth client: %v", err)
-	}
-	defer client.Close()
+ client, err := ethclient.DialContext(ctx, "REPLACE: network URL") // e.g., http://localhost:8545
+ if err != nil {
+  log.Fatalf("error connecting to eth client: %v", err)
+ }
+ defer client.Close()
 
-	contractAddress := common.HexToAddress("REPLACE: contract address") // printed by make devnet-deploy
-	caller := bind.CallOpts{
-		Pending: false,
-		Context: ctx,
-	}
+ contractAddress := common.HexToAddress("REPLACE: contract address") // printed by make devnet-deploy
+ caller := bind.CallOpts{
+  Pending: false,
+  Context: ctx,
+ }
 
-	boundContract := bind.NewBoundContract(
-		contractAddress,
-		abi,
-		client,
-		client,
-		client,
-	)
+ boundContract := bind.NewBoundContract(
+  contractAddress,
+  abi,
+  client,
+  client,
+  client,
+ )
 
-	var output []interface{}
-	err = boundContract.Call(&caller, &output, "REPLACE: method name")
-	if err != nil {
-		log.Fatalf("error calling contract: %v", err)
-	}
-	result = output
+ var output []interface{}
+ err = boundContract.Call(&caller, &output, "REPLACE: method name")
+ if err != nil {
+  log.Fatalf("error calling contract: %v", err)
+ }
+ result = output
 
-	fmt.Println("Successfully called contract!", result)
+ fmt.Println("Successfully called contract!", result)
 }
 ```
 
 To complete the challenge, you must send us the link to your repository with the alterations you made.
-

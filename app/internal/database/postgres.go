@@ -8,27 +8,27 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// NewPostgresPool inicializa a piscina de conexões com o PostgreSQL
+// NewPostgresPool initializes the PostgreSQL connection pool
 func NewPostgresPool(ctx context.Context, connString string) (*pgxpool.Pool, error) {
-	slog.Info("Inicializando pool de conexão com o banco de dados...")
+	slog.Info("Initializing database connection pool...")
 
-	// Faz o parse da string de conexão com configurações pattern do pgx
+	// Parses the connection string with pgx pattern configurations
 	poolConfig, err := pgxpool.ParseConfig(connString)
 	if err != nil {
-		return nil, fmt.Errorf("erro ao parsear URL do banco: %w", err)
+		return nil, fmt.Errorf("error parsing db URL: %w", err)
 	}
 
-	// Cria de fato a pool gerenciada
+	// Creates the actual managed pool
 	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
 	if err != nil {
-		return nil, fmt.Errorf("erro ao criar o pool de conexao: %w", err)
+		return nil, fmt.Errorf("error creating connection pool: %w", err)
 	}
 
-	// Executa um Ping de segurança para garantir a conectividade real
+	// Performs a safety ping to ensure real connectivity
 	if err := pool.Ping(ctx); err != nil {
-		return nil, fmt.Errorf("ping no banco de dados falhou: %w", err)
+		return nil, fmt.Errorf("database ping failed: %w", err)
 	}
 
-	slog.Info("Conexão com PostgreSQL estabelecida com sucesso")
+	slog.Info("Connection with PostgreSQL established successfully")
 	return pool, nil
 }

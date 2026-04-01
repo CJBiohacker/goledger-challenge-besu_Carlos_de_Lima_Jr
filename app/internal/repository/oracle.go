@@ -10,26 +10,26 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// OracleRepository é a nossa "Porta" (Interface).
-// A camada de UseCase (Regra de Negócio) só conversará com esta interface, e não com o pgx/v5 diretamente.
+// OracleRepository is our "Port" (Interface).
+// The UseCase layer (Business Logic) will only talk to this interface, not directly to pgx/v5.
 type OracleRepository interface {
-	// UpdateSyncedValue adiciona ou atualiza o último valor lido da blockchain.
+	// UpdateSyncedValue adds or updates the last value read from the blockchain.
 	UpdateSyncedValue(ctx context.Context, value string) error
 	
-	// GetSyncedValue lê o valor guardado no nosso banco de dados.
+	// GetSyncedValue reads the value stored in our database.
 	GetSyncedValue(ctx context.Context) (string, error)
 }
 
-// postgresOracleRepo é o nosso "Adaptador" de Banco de Dados.
+// postgresOracleRepo is our Database "Adapter".
 type postgresOracleRepo struct {
 	db *pgxpool.Pool
 }
 
-// NewPostgresOracleRepo atua como o Factory Pattern que injeta nossa pool e cria a tabela provisória
+// NewPostgresOracleRepo acts as the Factory Pattern that injects our pool and creates the provisional table
 func NewPostgresOracleRepo(ctx context.Context, db *pgxpool.Pool) (OracleRepository, error) {
 	repo := &postgresOracleRepo{db: db}
 	
-	// Ao instanciar o repositório, garantimos que o Schema e Tabela existem
+	// When instantiating the repository, we ensure the Schema and Table exist
 	if err := repo.initSchema(ctx); err != nil {
 		return nil, err
 	}
@@ -37,7 +37,7 @@ func NewPostgresOracleRepo(ctx context.Context, db *pgxpool.Pool) (OracleReposit
 	return repo, nil
 }
 
-// initSchema Cria a tabela `state_cache` automaticamente caso a infra a suba vazia
+// initSchema Creates the `state_cache` table automatically in case the infra spins it up empty
 func (r *postgresOracleRepo) initSchema(ctx context.Context) error {
 	query := `
 		CREATE TABLE IF NOT EXISTS state_cache (
@@ -49,15 +49,15 @@ func (r *postgresOracleRepo) initSchema(ctx context.Context) error {
 	`
 	_, err := r.db.Exec(ctx, query)
 	if err != nil {
-		slog.Error("Erro ao preparar schema do banco de dados", slog.Any("error", err))
-		return fmt.Errorf("falha ao criar tabela: %w", err)
+		slog.Error("Error preparing database schema", slog.Any("error", err))
+		return fmt.Errorf("failed creating table: %w", err)
 	}
 	return nil
 }
 
 func (r *postgresOracleRepo) UpdateSyncedValue(ctx context.Context, value string) error {
-	// Como somos apenas um "cache" espelho da Blockchain, manteremos sempre no ID = 1.
-	// O UPSERT no Postgres ocorre via "ON CONFLICT (id) DO UPDATE".
+	// Since we are just a mirror "cache" of the Blockchain, we will always keep ID = 1.
+	// The UPSERT in Postgres occurs via "ON CONFLICT (id) DO UPDATE".
 	query := `
 		INSERT INTO state_cache (id, value, updated_at) 
 		VALUES (1, $1, CURRENT_TIMESTAMP)
@@ -67,11 +67,11 @@ func (r *postgresOracleRepo) UpdateSyncedValue(ctx context.Context, value string
 	
 	_, err := r.db.Exec(ctx, query, value)
 	if err != nil {
-		slog.Error("Erro ao gravar (UPSERT) na tabela state_cache", slog.Any("error", err))
-		return fmt.Errorf("falha gravar no banco: %w", err)
+		slog.Error("Error writing (UPSERT) to state_cache table", slog.Any("error", err))
+		return fmt.Errorf("failed saving to database: %w", err)
 	}
 	
-	slog.Info("Valor atualizado no PostgreSQL com sucesso", slog.String("novo_valor", value))
+	slog.Info("Value updated successfully in PostgreSQL", slog.String("new_value", value))
 	return nil
 }
 
@@ -82,14 +82,14 @@ func (r *postgresOracleRepo) GetSyncedValue(ctx context.Context) (string, error)
 	err := r.db.QueryRow(ctx, query).Scan(&value)
 	
 	if err != nil {
-		// Se não houver nada salvo ainda, o aplicativo não deve capotar. O cache está apenas vazio.
+		// If nothing is saved yet, the application shouldn't crash. Cache is simply empty.
 		if errors.Is(err, pgx.ErrNoRows) {
-			slog.Warn("Nenhum dado encontrado no cache estadual (state_cache)")
+			slog.Warn("No data found in state cache (state_cache)")
 			return "", nil
 		}
 		
-		slog.Error("Falha na varredura do state_cache", slog.Any("error", err))
-		return "", fmt.Errorf("erro lendo do banco: %w", err)
+		slog.Error("Failed scanning state_cache", slog.Any("error", err))
+		return "", fmt.Errorf("error reading from database: %w", err)
 	}
 	
 	return value, nil

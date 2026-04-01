@@ -19,21 +19,21 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// server implementa a interface pb.OracleServiceServer
+// server implements the pb.OracleServiceServer interface
 type server struct {
 	pb.UnimplementedOracleServiceServer
 	uc *usecase.OracleUseCase
 }
 
-// Set escreve um valor no contrato inteligente na rede Besu.
+// Set writes a value to the smart contract on the Besu network.
 func (s *server) Set(ctx context.Context, req *pb.SetRequest) (*pb.SetResponse, error) {
 	if req.GetValue() == "" {
-		return nil, status.Error(codes.InvalidArgument, "o valor não pode ser vazio")
+		return nil, status.Error(codes.InvalidArgument, "value cannot be empty")
 	}
 
 	txHash, err := s.uc.Set(ctx, req.GetValue())
 	if err != nil {
-		slog.Error("Set gRPC Falhou", slog.Any("err", err))
+		slog.Error("Set gRPC Failed", slog.Any("err", err))
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -43,11 +43,11 @@ func (s *server) Set(ctx context.Context, req *pb.SetRequest) (*pb.SetResponse, 
 	}, nil
 }
 
-// Get lê o valor atual do contrato inteligente.
+// Get reads the current value from the smart contract.
 func (s *server) Get(ctx context.Context, req *pb.GetRequest) (*pb.GetResponse, error) {
 	val, err := s.uc.Get(ctx)
 	if err != nil {
-		slog.Error("Get gRPC Falhou", slog.Any("err", err))
+		slog.Error("Get gRPC Failed", slog.Any("err", err))
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -56,11 +56,11 @@ func (s *server) Get(ctx context.Context, req *pb.GetRequest) (*pb.GetResponse, 
 	}, nil
 }
 
-// Sync lê o valor da blockchain e salva/sincroniza no banco de dados (PostgreSQL).
+// Sync reads the value from the blockchain and saves/synchronizes it to the database (PostgreSQL).
 func (s *server) Sync(ctx context.Context, req *pb.SyncRequest) (*pb.SyncResponse, error) {
 	syncedVal, err := s.uc.Sync(ctx)
 	if err != nil {
-		slog.Error("Sync gRPC Falhou", slog.Any("err", err))
+		slog.Error("Sync gRPC Failed", slog.Any("err", err))
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -70,11 +70,11 @@ func (s *server) Sync(ctx context.Context, req *pb.SyncRequest) (*pb.SyncRespons
 	}, nil
 }
 
-// Check verifica se o valor armazenado no banco de dados corresponde ao valor da blockchain.
+// Check verifies if the value stored in the database matches the blockchain value.
 func (s *server) Check(ctx context.Context, req *pb.CheckRequest) (*pb.CheckResponse, error) {
 	inSync, dbVal, chainVal, err := s.uc.Check(ctx)
 	if err != nil {
-		slog.Error("Check gRPC Falhou", slog.Any("err", err))
+		slog.Error("Check gRPC Failed", slog.Any("err", err))
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -86,31 +86,31 @@ func (s *server) Check(ctx context.Context, req *pb.CheckRequest) (*pb.CheckResp
 }
 
 func main() {
-	// Logger estruturado
+	// Structured logger
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
 
-	// 1. Carrega variaveis do .env (ignora se não existir num server de prod)
+	// 1. Load variables from .env (ignore if it doesn't exist in a prod server)
 	_ = godotenv.Load(".env")
 	
 	ctx := context.Background()
 
-	// 2. Inicializa o Banco (Adaptador SQL)
+	// 2. Initialize the Database (SQL Adapter)
 	dbURL := os.Getenv("DB_URL")
 	pool, err := database.NewPostgresPool(ctx, dbURL)
 	if err != nil {
-		slog.Error("Falha inicalizando Postgres Pool", slog.Any("err", err))
+		slog.Error("Failed initializing Postgres Pool", slog.Any("err", err))
 		os.Exit(1)
 	}
 	defer pool.Close()
 
 	repo, err := repository.NewPostgresOracleRepo(ctx, pool)
 	if err != nil {
-		slog.Error("Falha criando o repositorio Oracle", slog.Any("err", err))
+		slog.Error("Failed creating Oracle repository", slog.Any("err", err))
 		os.Exit(1)
 	}
 
-	// 3. Inicializa a Blockchain (Adaptador Besu)
+	// 3. Initialize the Blockchain (Besu Adapter)
 	chainCfg := blockchain.Config{
 		RPCUrl:          os.Getenv("BESU_RPC_URL"),
 		ContractAddress: os.Getenv("CONTRACT_ADDRESS"),
@@ -120,32 +120,32 @@ func main() {
 	
 	chainClient, err := blockchain.NewBesuClient(ctx, chainCfg)
 	if err != nil {
-		slog.Error("Falha criando cliente da Blockchain Besu", slog.Any("err", err))
+		slog.Error("Failed creating Besu Blockchain client", slog.Any("err", err))
 		os.Exit(1)
 	}
 
-	// 4. Injeta as duas Portas na nossa Regra de Negócio (Hexagonal)
+	// 4. Inject the two Ports into our Business Logic (Hexagonal)
 	uc := usecase.NewOracleUseCase(repo, chainClient)
 
-	// 5. Inicia servidor gRPC injetando o UseCase
+	// 5. Start gRPC server injecting the UseCase
 	port := ":50051"
 	lis, err := net.Listen("tcp", port)
 	if err != nil {
-		slog.Error("Falha ao escutar na porta", slog.String("port", port), slog.Any("error", err))
+		slog.Error("Failed listening on port", slog.String("port", port), slog.Any("error", err))
 		os.Exit(1)
 	}
 
 	grpcServer := grpc.NewServer()
 
-	// Registra o serviço com a verdadeira lógica acoplada através de ponteiros
+	// Register the service with the real logic coupled through pointers
 	pb.RegisterOracleServiceServer(grpcServer, &server{uc: uc})
 
-	// OBRIGATÓRIO: Habilitar o gRPC Reflection
+	// MANDATORY: Enable gRPC Reflection
 	reflection.Register(grpcServer)
 
-	slog.Info("Servidor gRPC iniciado e aguardando conexões", slog.String("address", lis.Addr().String()))
+	slog.Info("gRPC server started and waiting for connections", slog.String("address", lis.Addr().String()))
 	if err := grpcServer.Serve(lis); err != nil {
-		slog.Error("Falha ao servir gRPC", slog.Any("error", err))
+		slog.Error("Failed to serve gRPC", slog.Any("error", err))
 		os.Exit(1)
 	}
 }

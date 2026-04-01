@@ -67,7 +67,7 @@ echo -e "\n${GREEN}besu.node-1 is responsive!${NC}\n"
 echo -e "${BLUE}Waiting for P2P subsystem to generate Enode...${NC}"
 ENODE_URL="null"
 
-# Fica em loop até o Besu parar de dar erro e retornar o URL real
+# Loops until Besu stops erroring and returns the real URL
 until [ "$ENODE_URL" != "null" ] && [ -n "$ENODE_URL" ]; do
     ENODE_RESPONSE=$(curl -s -X POST --data '{"jsonrpc":"2.0","method":"net_enode","params":[],"id":1}' -H "Content-Type: application/json" http://localhost:8545/ 2>/dev/null)
     ENODE_URL=$(echo $ENODE_RESPONSE | jq -r '.result')

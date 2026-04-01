@@ -1,9 +1,9 @@
-# Ambientes e Variáveis Secretas
+# Environments and Secret Variables
 .env
 .env.*
 !.env.example
 
-# Go
+# Go / Build & Testing Artifacts
 /app/bin/
 /app/build/
 /app/vendor/
@@ -11,10 +11,12 @@
 *.exe
 *.test
 *.out
+*.prof
 cover.out
 coverage.txt
+coverage.html
 
-# Editor / Sistema Operacional
+# Editor / Operational System
 .agents/
 .estrategia/
 .vscode/*
@@ -27,10 +29,15 @@ coverage.txt
 *.swp
 *.swo
 
+# Test Caches, Modules and Dependencies
+.cache/
+node_modules/
+.npm/
+
 # Docker / Postgres
 /postgres_data/
 
-# Dados de Nós do Besu gerados localmente (mantemos a configuração base)
+# Locally generated Besu Node Data (keep the base config)
 /besu/nodes/*/data/database/
 /besu/nodes/*/data/caches/
 /besu/nodes/*/data/besu.*
@@ -38,7 +45,7 @@ coverage.txt
 /besu/nodes/*/data/VERSION_METADATA.json
 /besu/nodes/*/logs/
 
-# Foundry / Solidy (dentro de SimpleStorage)
+# Foundry / Solidity (inside SimpleStorage)
 /SimpleStorage/cache/
 /SimpleStorage/out/
 /SimpleStorage/broadcast/
